@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black; /* Setează fundalul negru */
+        }
+        canvas {
+            display: block;
+        }
+        #joystickContainer {
+            position: absolute;
+            bottom: 5%;
+            left: 5%;
+            width: 20%;
+            height: 20%;
+        }
+        #clearButton {
+            position: absolute;
+            top: 5%;
+            right: 5%;
+            padding: 10px 20px;
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="joystickContainer"></div>
+    <button id="clearButton">Clear</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.7.3/nipplejs.min.js"></script>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image('car', 'path/to/car.png');
+        }
+
+        function create() {
+            this.car = this.physics.add.sprite(100, 100, 'car');
+            this.car.setCollideWorldBounds(true); // Coliziuni la marginile ecranului
+
+            // Inițializează joystick-ul
+            const joystick = nipplejs.create({
+                zone: document.getElementById('joystickContainer'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'blue'
+            });
+
+            joystick.on('move', (evt, data) => {
+                const angle = data.angle.degree;
+                const force = data.force;
+
+                if (angle >= 45 && angle < 135) {
+                    this.car.setVelocityY(-160 * force);
+                } else if (angle >= 135 && angle < 225) {
+                    this.car.setVelocityX(-160 * force);
+                } else if (angle >= 225 && angle < 315) {
+                    this.car.setVelocityY(160 * force);
+                } else {
+                    this.car.setVelocityX(160 * force);
+                }
+            });
+
+            joystick.on('end', () => {
+                this.car.setVelocity(0);
+            });
+
+            // Adaugă controlul WASD
+            this.cursors = this.input.keyboard.addKeys({
+                up: Phaser.Input.Keyboard.KeyCodes.W,
+                down: Phaser.Input.Keyboard.KeyCodes.S,
+                left: Phaser.Input.Keyboard.KeyCodes.A,
+                right: Phaser.Input.Keyboard.KeyCodes.D
+            });
+
+            // Creează un grup pentru blocurile colorate
+            this.blocks = this.add.group();
+
+            // Adaugă butonul de ștergere
+            const clearButton = document.getElementById('clearButton');
+            clearButton.addEventListener('click', () => {
+                this.blocks.clear(true, true);
+            });
+        }
+
+        function update() {
+            if (this.cursors.left.isDown) {
+                this.car.setVelocityX(-160);
+            } else if (this.cursors.right.isDown) {
+                this.car.setVelocityX(160);
+            } else {
+                this.car.setVelocityX(0);
+            }
+
+            if (this.cursors.up.isDown) {
+                this.car.setVelocityY(-160);
+            } else if (this.cursors.down.isDown) {
+                this.car.setVelocityY(160);
+            } else {
+                this.car.setVelocityY(0);
+            }
+
+            // Colorează traseul mașinii
+            if (this.car.body.velocity.x !== 0 || this.car.body.velocity.y !== 0) {
+                const color = Phaser.Display.Color.RandomRGB().color;
+                const block = this.add.rectangle(this.car.x, this.car.y, 10, 10, color);
+                this.blocks.add(block);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            game.scale.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
